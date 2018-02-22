@@ -27,8 +27,14 @@ public class Parse {
     private static final String GET_ALL_LINKS = "//td[@width='90%']/a[@class='SLink']";
     private static final String GET_ABSTRACT = "//b[contains(text(),'Аннотация')]/following::text()[preceding::b[1][contains(text(),'Аннотация')] and not(parent::b)]";
     private static final String GET_KEYWORDS = "//b[contains(text(), 'Ключевые')]/following-sibling::i[1]//text()";
+    private static final String UNKNOWN_SYMBOLS_REGEX = "[^А-Яа-я\\s]";
+    private static PorterParser porterParser;
+    private static MystemParser mystemParser;
 
     public void parse() throws IOException, InterruptedException {
+        porterParser = new PorterParser();
+        mystemParser = new MystemParser();
+
         WebClient webClient = new WebClient();
         webClient.getOptions().setCssEnabled(false);
         webClient.getOptions().setJavaScriptEnabled(false);
@@ -62,6 +68,14 @@ public class Parse {
                 title.appendChild(doc.createTextNode(link.getTextContent()));
                 articleElem.appendChild(title);
 
+                Element titlePorterElem = doc.createElement("title-porter");
+                titlePorterElem.appendChild(doc.createTextNode(getPorterString(link.getTextContent())));
+                articleElem.appendChild(titlePorterElem);
+
+                Element titleMystemElem = doc.createElement("title-mystem");
+                titleMystemElem.appendChild(doc.createTextNode(getMystemString(link.getTextContent())));
+                articleElem.appendChild(titleMystemElem);
+
                 StringBuilder abstractWords = new StringBuilder();
                 List<Object> abstractList = parsePage.getByXPath(GET_ABSTRACT);
                 for (Object abstractItem : abstractList) {
@@ -71,6 +85,14 @@ public class Parse {
                 Element abstractElem = doc.createElement("abstract");
                 abstractElem.appendChild(doc.createTextNode(abstractWords.toString()));
                 articleElem.appendChild(abstractElem);
+
+                Element abstractPorterElem = doc.createElement("abstract-porter");
+                abstractPorterElem.appendChild(doc.createTextNode(getPorterString(abstractWords.toString())));
+                articleElem.appendChild(abstractPorterElem);
+
+                Element abstractMystemElem = doc.createElement("abstract-mystem");
+                abstractMystemElem.appendChild(doc.createTextNode(getMystemString(abstractWords.toString())));
+                articleElem.appendChild(abstractMystemElem);
 
                 StringBuilder keyWords = new StringBuilder();
                 List<Object> keywordsList = parsePage.getByXPath(GET_KEYWORDS);
@@ -115,8 +137,25 @@ public class Parse {
     private String getXmlFileName() {
         SimpleDateFormat time_formatter = new SimpleDateFormat("yyyy-MM-dd-_HH:mm:ss");
         String current_time_str = time_formatter.format(System.currentTimeMillis());
-
         return System.getProperty("user.dir") + "/" + current_time_str.replaceAll(":", "_") + ".xml";
+    }
+
+    private String getPorterString(String str) {
+        String[] porterWordsArray = str.replaceAll(UNKNOWN_SYMBOLS_REGEX, "").split("\\s+");
+        StringBuilder porterWords = new StringBuilder();
+        for (String word : porterWordsArray) {
+            porterWords.append(porterParser.stem(word)).append(" ");
+        }
+        return porterWords.toString();
+    }
+
+    private String getMystemString(String str) throws IOException, InterruptedException {
+        StringBuilder mystemWords = new StringBuilder();
+        String[] mystemWordsArray = str.replaceAll(UNKNOWN_SYMBOLS_REGEX, "").split("\\s+");
+        for (String word : mystemWordsArray) {
+            mystemWords.append(mystemParser.stem(word)).append(" ");
+        }
+        return mystemWords.toString();
     }
 
 }
