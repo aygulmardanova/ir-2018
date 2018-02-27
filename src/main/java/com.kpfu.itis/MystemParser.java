@@ -7,7 +7,7 @@ public class MystemParser {
 
     public String stem(String word) throws IOException {
         ProcessBuilder processBuilder = new ProcessBuilder(System.getProperty("user.home") + "/mystem",
-                "-ln", "-e", "utf-8",
+                "-lnd", "-e", "utf-8",
                 "--format", "text");
         processBuilder.redirectErrorStream(true);
         Process process = processBuilder.start();
