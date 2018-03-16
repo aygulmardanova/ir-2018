@@ -103,11 +103,12 @@ public class InvertedIndex {
         NodeList typeNodes = readDoc.getElementsByTagName(type);
         TreeMap<String, Set<Integer>> map = new TreeMap<>();
         for (int i = 0; i < typeNodes.getLength(); i++) {
-            appendWords(typeNodes.item(i).getTextContent().trim().toLowerCase().replaceAll("[,.]", ""), map, i);
+            appendWords(typeNodes.item(i).getTextContent().trim().toLowerCase().replaceAll("[(),.]", ""), map, i);
         }
         for (String word : map.keySet()) {
             Element wordElem = writeDoc.createElement("word");
             wordElem.setAttribute("word", word);
+            wordElem.setAttribute("count", String.valueOf(map.get(word).size()));
             for (Integer docId : map.get(word)) {
                 Element docIdElem = writeDoc.createElement("doc");
                 docIdElem.setTextContent(String.valueOf(docId));
@@ -118,7 +119,7 @@ public class InvertedIndex {
     }
 
     private void appendWords(String text, TreeMap<String, Set<Integer>> map, int docId) {
-        String[] words = text.split("\\s+");
+        String[] words = text.split("[-–\\u00A0\\s]+");
         for (String word : words) {
             if (map.containsKey(word)) {
                 map.get(word).add(docId);
