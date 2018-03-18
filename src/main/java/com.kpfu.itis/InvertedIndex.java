@@ -17,8 +17,8 @@ import java.util.*;
 
 public class InvertedIndex {
 
-    private final String xmlFileName = "2018-03-18-_14_58_12.xml";
-    private final String prefix = "index_";
+    protected static final String XML_FILE_NAME = "2018-03-18-_14_58_12.xml";
+    protected static final String PREFIX = "index_";
 
     public void createIndex() throws IOException, SAXException, ParserConfigurationException {
 
@@ -28,13 +28,13 @@ public class InvertedIndex {
         DocumentBuilder docBuilder = dbFactory.newDocumentBuilder();
 
 //        read xml file with title & abstract
-        Document readDoc = docBuilder.parse(new File(System.getProperty("user.dir") + "/" + xmlFileName));
+        Document readDoc = docBuilder.parse(new File(System.getProperty("user.dir") + "/" + XML_FILE_NAME));
         readDoc.normalizeDocument();
 
 //        builder for result xml-file
         Document writeDoc = docBuilder.newDocument();
         Element root = writeDoc.createElement("words");
-        root.setAttribute("fileName", xmlFileName);
+        root.setAttribute("fileName", XML_FILE_NAME);
         writeDoc.appendChild(root);
 
 //        write titles list
@@ -91,7 +91,7 @@ public class InvertedIndex {
         try {
             transformer = TransformerFactory.newInstance().newTransformer();
             DOMSource source = new DOMSource(writeDoc);
-            StreamResult result = new StreamResult(new File(System.getProperty("user.dir") + "/" + prefix + xmlFileName));
+            StreamResult result = new StreamResult(new File(System.getProperty("user.dir") + "/" + PREFIX + XML_FILE_NAME));
             transformer.setOutputProperty(OutputKeys.INDENT, "yes");
             transformer.transform(source, result);
         } catch (TransformerException e) {
@@ -123,12 +123,14 @@ public class InvertedIndex {
                 .replaceAll(Parse.UNKNOWN_SYMBOLS_REGEX, "")
                 .split(Parse.SPLIT_WORDS_REGEX);
         for (String word : words) {
-            if (map.containsKey(word)) {
-                map.get(word).add(docId);
-            } else {
-                Set<Integer> set = new HashSet<>();
-                set.add(docId);
-                map.put(word, set);
+            if (word.length() != 0) {
+                if (map.containsKey(word)) {
+                    map.get(word).add(docId);
+                } else {
+                    Set<Integer> set = new HashSet<>();
+                    set.add(docId);
+                    map.put(word, set);
+                }
             }
         }
     }
