@@ -27,7 +27,8 @@ public class Parse {
     private static final String GET_ALL_LINKS = "//td[@width='90%']/a[@class='SLink']";
     private static final String GET_ABSTRACT = "//b[contains(text(),'Аннотация')]/following::text()[preceding::b[1][contains(text(),'Аннотация')] and not(parent::b)]";
     private static final String GET_KEYWORDS = "//b[contains(text(), 'Ключевые')]/following-sibling::i[1]//text()";
-    private static final String UNKNOWN_SYMBOLS_REGEX = "[^А-Яа-я\\s]";
+    protected static final String UNKNOWN_SYMBOLS_REGEX = "[^А-Яа-я\\s]";
+    protected static final String SPLIT_WORDS_REGEX = "[\\s]+";
     private static PorterParser porterParser;
     private static MystemParser mystemParser;
 
@@ -141,7 +142,7 @@ public class Parse {
     }
 
     private String getPorterString(String str) {
-        String[] porterWordsArray = str.replaceAll(UNKNOWN_SYMBOLS_REGEX, "").split("\\s+");
+        String[] porterWordsArray = str.replaceAll("[–\\-]", " ").replaceAll("\\u00A0", " ").replaceAll(UNKNOWN_SYMBOLS_REGEX, "").split(SPLIT_WORDS_REGEX);
         StringBuilder porterWords = new StringBuilder();
         for (String word : porterWordsArray) {
             porterWords.append(porterParser.stem(word)).append(" ");
@@ -151,9 +152,10 @@ public class Parse {
 
     private String getMystemString(String str) throws IOException, InterruptedException {
         StringBuilder mystemWords = new StringBuilder();
-        String[] mystemWordsArray = str.replaceAll(UNKNOWN_SYMBOLS_REGEX, "").split("\\s+");
+        String[] mystemWordsArray = str.replaceAll("[–\\-]", " ").replaceAll("\\u00A0", " ").replaceAll(UNKNOWN_SYMBOLS_REGEX, "").split(SPLIT_WORDS_REGEX);
         for (String word : mystemWordsArray) {
-            mystemWords.append(mystemParser.stem(word)).append(" ");
+            if (word.length() != 0)
+                mystemWords.append(mystemParser.stem(word)).append(" ");
         }
         return mystemWords.toString();
     }

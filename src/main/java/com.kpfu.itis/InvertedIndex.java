@@ -17,7 +17,7 @@ import java.util.*;
 
 public class InvertedIndex {
 
-    private final String xmlFileName = "2018-02-28-_01_05_07.xml";
+    private final String xmlFileName = "2018-03-18-_14_58_12.xml";
     private final String prefix = "index_";
 
     public void createIndex() throws IOException, SAXException, ParserConfigurationException {
@@ -119,7 +119,9 @@ public class InvertedIndex {
     }
 
     private void appendWords(String text, TreeMap<String, Set<Integer>> map, int docId) {
-        String[] words = text.split("[-–\\u00A0\\s]+");
+        String[] words = text.replaceAll("[–\\-\\u00A0]", " ")
+                .replaceAll(Parse.UNKNOWN_SYMBOLS_REGEX, "")
+                .split(Parse.SPLIT_WORDS_REGEX);
         for (String word : words) {
             if (map.containsKey(word)) {
                 map.get(word).add(docId);
