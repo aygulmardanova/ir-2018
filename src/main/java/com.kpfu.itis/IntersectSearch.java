@@ -12,10 +12,10 @@ import java.util.*;
 
 public class IntersectSearch {
 
-    private static final String INDEX_FILE_NAME = InvertedIndex.PREFIX + InvertedIndex.XML_FILE_NAME;
-    private static final String TEXT_CONTENT_REMOVE_EMPTIES_REGEXP = "[\n\t\\s]+";
+    protected static final String INDEX_FILE_NAME = InvertedIndex.PREFIX + InvertedIndex.XML_FILE_NAME;
+    protected static final String TEXT_CONTENT_REMOVE_EMPTIES_REGEXP = "[\n\t\\s]+";
 
-    public Set<Integer> search(String sentence, String type) throws IOException, ParserConfigurationException, SAXException {
+    public Set<Integer> search(String query, String type) throws IOException, ParserConfigurationException, SAXException {
 
         PorterParser porterParser = new PorterParser();
         MystemParser mystemParser = new MystemParser();
@@ -32,7 +32,7 @@ public class IntersectSearch {
         NodeList wordsNodeList = readDoc.getElementsByTagName("word");
 
 //        parsing
-        String[] words = sentence.toLowerCase().split("\\s+");
+        String[] words = query.toLowerCase().split("\\s+");
 
         Map<String, Set<Integer>> map = new TreeMap<>();
         Set<Integer> allDocIds = new HashSet<>();
@@ -86,7 +86,7 @@ public class IntersectSearch {
         }
 
 //      Print the results
-        System.out.println("Documents for input \"" + sentence + "\":");
+        System.out.println("Documents for input \"" + query + "\":");
         System.out.println("count: " + result.size());
         result.forEach(integer -> System.out.print(integer + " "));
         System.out.println("\n");

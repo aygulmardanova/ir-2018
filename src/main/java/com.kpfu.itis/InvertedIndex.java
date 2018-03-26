@@ -45,6 +45,15 @@ public class InvertedIndex {
             Element title = writeDoc.createElement("title");
             title.setAttribute("id", String.valueOf(i));
             title.setTextContent(titlesNodes.item(i).getTextContent().trim().replaceAll("\n", ""));
+            Integer wordsCount = titlesNodes.item(i).getTextContent().trim().replaceAll("[–\\-\\u00A0]", " ")
+                    .replaceAll(Parse.UNKNOWN_SYMBOLS_REGEX, "")
+                    .split(Parse.SPLIT_WORDS_REGEX).length;
+            NodeList typeNodes = readDoc.getElementsByTagName("abstract");
+            wordsCount += typeNodes.item(i).getTextContent().trim().replaceAll("[–\\-\\u00A0]", " ")
+                    .replaceAll(Parse.UNKNOWN_SYMBOLS_REGEX, "")
+                    .split(Parse.SPLIT_WORDS_REGEX).length;
+            title.setAttribute("words-count", String.valueOf(wordsCount));
+
             titles.appendChild(title);
         }
 
@@ -101,24 +110,28 @@ public class InvertedIndex {
 
     private void writeWords(Document readDoc, Document writeDoc, String type, Element curRootElem) {
         NodeList typeNodes = readDoc.getElementsByTagName(type);
-        TreeMap<String, Set<Integer>> map = new TreeMap<>();
+        TreeMap<String, List<Integer>> map = new TreeMap<>();
         for (int i = 0; i < typeNodes.getLength(); i++) {
             appendWords(typeNodes.item(i).getTextContent().trim().toLowerCase().replaceAll("[(),.]", ""), map, i);
         }
         for (String word : map.keySet()) {
             Element wordElem = writeDoc.createElement("word");
             wordElem.setAttribute("word", word);
-            wordElem.setAttribute("count", String.valueOf(map.get(word).size()));
-            for (Integer docId : map.get(word)) {
+            Set<Integer> docIds = new HashSet<>(map.get(word));
+            wordElem.setAttribute("count", String.valueOf(docIds.size()));
+            Long wordCount;
+            for (Integer docId : docIds) {
+                wordCount = map.get(word).stream().filter(i -> docId.equals(i)).count();
                 Element docIdElem = writeDoc.createElement("doc");
                 docIdElem.setTextContent(String.valueOf(docId));
+                docIdElem.setAttribute("occurs", String.valueOf(wordCount));
                 wordElem.appendChild(docIdElem);
             }
             curRootElem.appendChild(wordElem);
         }
     }
 
-    private void appendWords(String text, TreeMap<String, Set<Integer>> map, int docId) {
+    private void appendWords(String text, TreeMap<String, List<Integer>> map, int docId) {
         String[] words = text.replaceAll("[–\\-\\u00A0]", " ")
                 .replaceAll(Parse.UNKNOWN_SYMBOLS_REGEX, "")
                 .split(Parse.SPLIT_WORDS_REGEX);
@@ -127,9 +140,9 @@ public class InvertedIndex {
                 if (map.containsKey(word)) {
                     map.get(word).add(docId);
                 } else {
-                    Set<Integer> set = new HashSet<>();
-                    set.add(docId);
-                    map.put(word, set);
+                    List<Integer> list = new ArrayList<>();
+                    list.add(docId);
+                    map.put(word, list);
                 }
             }
         }

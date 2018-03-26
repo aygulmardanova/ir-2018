@@ -15,5 +15,6 @@ public class Main {
 //        new IntersectSearch().search("-это -ядро функция неслово", "mystem");
 //        new IntersectSearch().search("-это эксперимент -ядро функция", "mystem");
 //        new IntersectSearch().search("это эллиптический -эксперимент -ядро", "porter");
+
     }
 }
