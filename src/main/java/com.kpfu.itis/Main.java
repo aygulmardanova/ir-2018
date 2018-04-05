@@ -12,7 +12,7 @@ public class Main {
 //        new Parse().parse();
 //        new InvertedIndex().createIndex();
 //        new TfIdf().writeWordScoreToXml();
-        new TfIdf().calcTfIdf("уравнение функция", "porter");
+//        new TfIdf().calcTfIdf("уравнение функция", "porter");
 //        new TfIdf().calcTfIdf("это функция", "porter");
 //        new IntersectSearch().search("-это -ядро функция", "porter");
 //        new IntersectSearch().search("-это -ядро функция неслово", "mystem");

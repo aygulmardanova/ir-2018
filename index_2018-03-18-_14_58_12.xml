@@ -5468,7 +5468,7 @@
                 <doc occurs="1" score="0.0182">10</doc>
             </word>
             <word count="1" word="якобиан">
-                <doc occurs="1">4</doc>
+                <doc occurs="1" score="0.0137">4</doc>
             </word>
         </mystem>
     </abstract>

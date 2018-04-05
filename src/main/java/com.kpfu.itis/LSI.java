@@ -1,5 +1,6 @@
 package com.kpfu.itis;
 
+import Jama.Matrix;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
@@ -16,6 +17,7 @@ public class LSI {
 
     static void calcLSI() throws IOException, SAXException, ParserConfigurationException {
         String type = "mystem";
+        String text = "abstract";
         DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
         dbFactory.setNamespaceAware(true);
         dbFactory.setIgnoringElementContentWhitespace(true);
@@ -28,6 +30,7 @@ public class LSI {
         String[] words;
         Integer[] docIds;
         int wordsStartsFrom = -1;
+        int wordsEndsBy = -1;
         List<String> wordsList = new ArrayList<>();
         List<Integer> titlesList = new ArrayList<>();
         NodeList wordsNodeList = readDoc.getElementsByTagName("word");
@@ -41,29 +44,42 @@ public class LSI {
 
 
         for (int i = 0; i < wordsNodeList.getLength(); i++) {
-            if (type.equals(wordsNodeList.item(i).getParentNode().getNodeName())) {
+            if (type.equals(wordsNodeList.item(i).getParentNode().getNodeName()) &&
+                    text.equals(wordsNodeList.item(i).getParentNode().getParentNode().getNodeName())) {
                 if (wordsStartsFrom < 0)
                     wordsStartsFrom = i;
-//                System.out.println(wordsNodeList.item(i).getChildNodes().item(0).getAttributes().getNamedItem("score").getTextContent());
+
                 wordsList.add(wordsNodeList.item(i).getAttributes().getNamedItem("word").getTextContent());
+                wordsEndsBy = i;
             }
         }
         words = wordsList.toArray(new String[wordsList.size()]);
-        System.out.println(wordsStartsFrom + "!!!!");
+
+        int count = 0;
+        System.out.println("LENGTH: " + words.length);
+        System.out.println(wordsStartsFrom + " --- " + wordsEndsBy);
         double[][] scores = new double[wordsList.size()][titlesList.size()];
-        for (int i = wordsStartsFrom; i < wordsStartsFrom + words.length; i++) {
-            if (type.equals(wordsNodeList.item(i).getParentNode().getNodeName())) {
-                System.out.println(i - wordsStartsFrom + " . ");
-//                for (int j = 0; j < wordsNodeList.item(i).getChildNodes().getLength(); j++) {
-//
-//                    Double score = Double.valueOf(wordsNodeList.item(i).getChildNodes().item(j).getAttributes().getNamedItem("score").getTextContent());
-////                    scores[i][Integer.parseInt(wordsNodeList.item(i).getChildNodes().item(j).getTextContent())] = score;
-//                    System.out.println(wordsNodeList.item(i).getChildNodes().item(j).getTextContent() + " - score");
-//
-//                }
-//
+        for (int i = wordsStartsFrom; i < wordsEndsBy; i++) {
+            if (type.equals(wordsNodeList.item(i).getParentNode().getNodeName()) &&
+                    text.equals(wordsNodeList.item(i).getParentNode().getParentNode().getNodeName())) {
+                System.out.println("word: \"" + wordsNodeList.item(i).getAttributes().getNamedItem("word").getNodeValue() + "\"");
+                for (int j = 0; j < wordsNodeList.item(i).getChildNodes().getLength(); j++) {
+                    if (!"".equals(wordsNodeList.item(i).getChildNodes().item(j).getTextContent().trim())) {
+                        Double score = Double.valueOf(wordsNodeList.item(i).getChildNodes().item(j).getAttributes().getNamedItem("score").getTextContent());
+                        scores[count][Integer.parseInt(wordsNodeList.item(i).getChildNodes().item(j).getTextContent())] = score;
+                        System.out.println("doc = " + wordsNodeList.item(i).getChildNodes().item(j).getTextContent() + ", score = " + score);
+                    }
+                }
+                System.out.println("count: " + count);
+                count++;
             }
         }
+
+        printDoubleArray(words, docIds, scores);
+
+        Matrix matrix = new Matrix(scores);
+
+
 
     }
 
@@ -71,6 +87,21 @@ public class LSI {
 
         LSI.calcLSI();
 
+    }
+
+    static void printDoubleArray(String[] words, Integer[] docIds, double[][] scores) {
+        System.out.print("--------");
+        for (int i = 0; i < docIds.length; i++)
+            System.out.print(docIds[i] + "   ");
+        System.out.println();
+        for (int i = 0; i < words.length; i++) {
+            System.out.print(words[i] + " ");
+            for (int j = 0; j < docIds.length; j++) {
+                System.out.print(scores[i][j] + " ");
+            }
+            System.out.println();
+        }
+        System.out.println();
     }
 
 }
