@@ -18,7 +18,6 @@ import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.net.Inet4Address;
 import java.util.*;
 
 public class TfIdf {
@@ -168,6 +167,59 @@ public class TfIdf {
         } catch (TransformerException e) {
             e.printStackTrace();
         }
+    }
+
+    public Map<String, Double> getTfIdfForQuery(String query, String type, String text) throws IOException, ParserConfigurationException, SAXException {
+
+        DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+        dbFactory.setNamespaceAware(true);
+        dbFactory.setIgnoringElementContentWhitespace(true);
+        DocumentBuilder docBuilder = dbFactory.newDocumentBuilder();
+
+//        read xml file with title & abstract
+        Document readDoc = docBuilder.parse(new File(System.getProperty("user.dir") + "/" + IntersectSearch.INDEX_FILE_NAME));
+        readDoc.normalizeDocument();
+
+        List<String> queryWords = Arrays.asList(query.toLowerCase().split(" "));
+        Map<String, Double> tfIdfs = new TreeMap<>();
+        for (int i = 0; i < queryWords.size(); i++) {
+            if ("porter".equals(type)) {
+                queryWords.set(i, new PorterParser().stem(queryWords.get(i)));
+            } else if ("mystem".equals(type)) {
+                queryWords.set(i, new MystemParser().stem(queryWords.get(i)));
+            }
+
+            Double tf = (double) getWordCount(queryWords.get(i), queryWords) / queryWords.size();
+            System.out.println("tf = " + tf);
+            Double idf = 0.0;
+
+            NodeList wordsNodeList = readDoc.getElementsByTagName("word");
+            NodeList titlesNodes = readDoc.getElementsByTagName("title");
+
+            for (int ind = 0; ind < wordsNodeList.getLength() - 1; ind++) {
+                if (queryWords.get(i).equals(wordsNodeList.item(ind).getAttributes().getNamedItem("word").getTextContent()) &&
+                        type.equals(wordsNodeList.item(ind).getParentNode().getNodeName()) &&
+                        text.equals(wordsNodeList.item(ind).getParentNode().getParentNode().getNodeName())) {
+
+                    int count = Integer.parseInt(wordsNodeList.item(ind).getAttributes().getNamedItem("count").getTextContent());
+                    System.out.println(queryWords.get(i) + " - " + count);
+                    idf = (double) count / titlesNodes.getLength();
+                    System.out.println("idf = " + idf);
+
+                }
+            }
+            tfIdfs.put(queryWords.get(i), tf * idf);
+        }
+        return tfIdfs;
+    }
+
+    private int getWordCount(String word, List<String> words) {
+        int wordCount = 0;
+        for (int i = 0; i < words.size(); i++) {
+            if (word.equals(words.get(i)))
+                wordCount++;
+        }
+        return wordCount;
     }
 
     private Double get2Log(Double value) {

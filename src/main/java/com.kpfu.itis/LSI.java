@@ -11,12 +11,12 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class LSI {
 
-    static void calcLSI() throws IOException, SAXException, ParserConfigurationException {
+    void calcLSI(String query) throws IOException, SAXException, ParserConfigurationException {
         String type = "mystem";
         String text = "abstract";
         int k = 2;
@@ -57,25 +57,21 @@ public class LSI {
         words = wordsList.toArray(new String[wordsList.size()]);
 
         int count = 0;
-        System.out.println("Words count: " + words.length);
-        System.out.println(wordsStartsFrom + " --- " + wordsEndsBy);
         double[][] scores = new double[wordsList.size()][titlesList.size()];
         for (int i = wordsStartsFrom; i < wordsEndsBy; i++) {
             if (type.equals(wordsNodeList.item(i).getParentNode().getNodeName()) &&
                     text.equals(wordsNodeList.item(i).getParentNode().getParentNode().getNodeName())) {
-                System.out.println("word: \"" + wordsNodeList.item(i).getAttributes().getNamedItem("word").getNodeValue() + "\"");
+//                System.out.println("word: \"" + wordsNodeList.item(i).getAttributes().getNamedItem("word").getNodeValue() + "\"");
                 for (int j = 0; j < wordsNodeList.item(i).getChildNodes().getLength(); j++) {
                     if (!"".equals(wordsNodeList.item(i).getChildNodes().item(j).getTextContent().trim())) {
                         Double score = Double.valueOf(wordsNodeList.item(i).getChildNodes().item(j).getAttributes().getNamedItem("score").getTextContent());
                         scores[count][Integer.parseInt(wordsNodeList.item(i).getChildNodes().item(j).getTextContent())] = score;
-                        System.out.println("doc = " + wordsNodeList.item(i).getChildNodes().item(j).getTextContent() + ", score = " + score);
+//                        System.out.println("doc = " + wordsNodeList.item(i).getChildNodes().item(j).getTextContent() + ", score = " + score);
                     }
                 }
                 count++;
             }
         }
-
-        printScoresMatrix(words, docIds, scores);
 
         Matrix matrix = Matrix.constructWithCopy(scores);
         SingularValueDecomposition svd = matrix.svd();
@@ -87,28 +83,56 @@ public class LSI {
         printMatrix(U, "---U---");
         printMatrix(S, "---S---");
         printMatrix(V, "---V---");
+
+        /*System.out.println();
         System.out.println("U: " + U.getRowDimension() + ", " + U.getColumnDimension());
         System.out.println("S: " + S.getRowDimension() + ", " + S.getColumnDimension());
         System.out.println("V: " + V.getRowDimension() + ", " + V.getColumnDimension());
+        System.out.println();*/
 
 //        U - k cols
 //        S - k cols * k rows
 //        V - k cols -> V' - k rows
         Matrix Uk = U.getMatrix(0, U.getRowDimension() - 1, 0, k - 1);
         Matrix Sk = S.getMatrix(0, k - 1, 0, k - 1);
-        Matrix Vk = V.getMatrix(0, k, 0, V.getColumnDimension() - 1);
+        Matrix Vk = V.getMatrix(0, k - 1, 0, V.getColumnDimension() - 1);
 
         printMatrix(Uk, "---U_" + k + "---");
         printMatrix(Sk, "---S_" + k + "---");
         printMatrix(Vk, "---V_" + k + "---");
 
+        Map<String, Double> tfIdfs = new TfIdf().getTfIdfForQuery(query, type, text);
+        tfIdfs.keySet().forEach(key -> System.out.println(key + ": = " + tfIdfs.get(key)));
+
+        double[] q = getQArray(wordsList, tfIdfs);
+
+        Matrix qMatrix = Matrix.constructWithCopy(new double[][]{q}).times(Uk).times(Sk.inverse());
+        printMatrix(qMatrix, "---qMatrix---");
+
+        Matrix dMatrix = Sk.inverse().times(Vk);
+        printMatrix(dMatrix, "---dMatrix---");
+
+        Set<Integer> docIdsForQuery = new IntersectSearch().search(query, type);
+        Map<Integer, Double> docScores = new TreeMap<>();
+        for (int i = 0; i < Vk.getColumnDimension(); i++) {
+            if (docIdsForQuery.contains(i))
+                docScores.put(i, calcSim(qMatrix.getArray(), Vk.transpose().getArray()[i]));
+            System.out.println("Sim(\"" + query + "\", doc" + docIds[i] + ") = " + String.format("%.3f", calcSim(qMatrix.getArray(), Vk.transpose().getArray()[i])));
+        }
+        docScores.keySet().stream()
+                .filter(docIdsForQuery::contains);
+        docScores = docScores.entrySet().stream()
+                .sorted(Map.Entry.comparingByValue()).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
+                        (oldValue, newValue) -> oldValue, LinkedHashMap::new));
+
+        System.out.println("RESULT OUTPUT");
+        printScoresMatrix(words, docIds, scores);
+        System.out.println("Docs sim in ASC mode");
+        Map<Integer, Double> finalDocScores = docScores;
+        docScores.keySet().forEach(docScore -> System.out.println("Sim(\"" + query + "\", doc" + docScore + ") = " + String.format("%.3f", finalDocScores.get(docScore))));
     }
 
-    public static void main(String[] args) throws ParserConfigurationException, SAXException, IOException {
-        LSI.calcLSI();
-    }
-
-    private static void printMatrix(Matrix matrix, String name) {
+    private void printMatrix(Matrix matrix, String name) {
 
         System.out.println(name);
         for (int i = 0; i < matrix.getRowDimension(); i++) {
@@ -119,7 +143,8 @@ public class LSI {
         }
     }
 
-    private static void printScoresMatrix(String[] words, Integer[] docIds, double[][] scores) {
+    private void printScoresMatrix(String[] words, Integer[] docIds, double[][] scores) {
+        System.out.println("Scores matrix");
         System.out.print("         ");
         for (Integer docId : docIds)
             System.out.print(docId + "   ");
@@ -132,5 +157,29 @@ public class LSI {
             System.out.println();
         }
         System.out.println();
+    }
+
+    private double[] getQArray(List<String> words, Map<String, Double> map) {
+        double[] arr = new double[words.size()];
+        for (int i = 0; i < words.size(); i++) {
+            if (map.containsKey(words.get(i)))
+                arr[i] = map.get(words.get(i));
+            else
+                arr[i] = 0;
+        }
+        return arr;
+    }
+
+    private double calcSim(double[][] query, double[] doc) {
+        double queryLength = 0.0;
+        double docsLength = 0.0;
+        double scalMult = 0.0;
+
+        for (int i = 0; i < doc.length; i++) {
+            scalMult += query[0][i] * doc[i];
+            queryLength += Math.pow(query[0][i], 2);
+            docsLength += Math.pow(doc[i], 2);
+        }
+        return scalMult / ((Math.sqrt(queryLength)) * (Math.sqrt(docsLength)));
     }
 }
