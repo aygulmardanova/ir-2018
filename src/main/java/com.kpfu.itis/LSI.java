@@ -1,6 +1,7 @@
 package com.kpfu.itis;
 
 import Jama.Matrix;
+import Jama.SingularValueDecomposition;
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
@@ -18,6 +19,7 @@ public class LSI {
     static void calcLSI() throws IOException, SAXException, ParserConfigurationException {
         String type = "mystem";
         String text = "abstract";
+        int k = 2;
         DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
         dbFactory.setNamespaceAware(true);
         dbFactory.setIgnoringElementContentWhitespace(true);
@@ -42,7 +44,6 @@ public class LSI {
         }
         docIds = titlesList.toArray(new Integer[titlesList.size()]);
 
-
         for (int i = 0; i < wordsNodeList.getLength(); i++) {
             if (type.equals(wordsNodeList.item(i).getParentNode().getNodeName()) &&
                     text.equals(wordsNodeList.item(i).getParentNode().getParentNode().getNodeName())) {
@@ -56,7 +57,7 @@ public class LSI {
         words = wordsList.toArray(new String[wordsList.size()]);
 
         int count = 0;
-        System.out.println("LENGTH: " + words.length);
+        System.out.println("Words count: " + words.length);
         System.out.println(wordsStartsFrom + " --- " + wordsEndsBy);
         double[][] scores = new double[wordsList.size()][titlesList.size()];
         for (int i = wordsStartsFrom; i < wordsEndsBy; i++) {
@@ -70,29 +71,58 @@ public class LSI {
                         System.out.println("doc = " + wordsNodeList.item(i).getChildNodes().item(j).getTextContent() + ", score = " + score);
                     }
                 }
-                System.out.println("count: " + count);
                 count++;
             }
         }
 
-        printDoubleArray(words, docIds, scores);
+        printScoresMatrix(words, docIds, scores);
 
-        Matrix matrix = new Matrix(scores);
+        Matrix matrix = Matrix.constructWithCopy(scores);
+        SingularValueDecomposition svd = matrix.svd();
 
+        Matrix U = svd.getU();
+        Matrix S = svd.getS();
+        Matrix V = svd.getV().transpose();
 
+        printMatrix(U, "---U---");
+        printMatrix(S, "---S---");
+        printMatrix(V, "---V---");
+        System.out.println("U: " + U.getRowDimension() + ", " + U.getColumnDimension());
+        System.out.println("S: " + S.getRowDimension() + ", " + S.getColumnDimension());
+        System.out.println("V: " + V.getRowDimension() + ", " + V.getColumnDimension());
+
+//        U - k cols
+//        S - k cols * k rows
+//        V - k cols -> V' - k rows
+        Matrix Uk = U.getMatrix(0, U.getRowDimension() - 1, 0, k - 1);
+        Matrix Sk = S.getMatrix(0, k - 1, 0, k - 1);
+        Matrix Vk = V.getMatrix(0, k, 0, V.getColumnDimension() - 1);
+
+        printMatrix(Uk, "---U_" + k + "---");
+        printMatrix(Sk, "---S_" + k + "---");
+        printMatrix(Vk, "---V_" + k + "---");
 
     }
 
     public static void main(String[] args) throws ParserConfigurationException, SAXException, IOException {
-
         LSI.calcLSI();
-
     }
 
-    static void printDoubleArray(String[] words, Integer[] docIds, double[][] scores) {
-        System.out.print("--------");
-        for (int i = 0; i < docIds.length; i++)
-            System.out.print(docIds[i] + "   ");
+    private static void printMatrix(Matrix matrix, String name) {
+
+        System.out.println(name);
+        for (int i = 0; i < matrix.getRowDimension(); i++) {
+            for (int j = 0; j < matrix.getColumnDimension(); j++) {
+                System.out.print(String.format("%.3f", matrix.get(i, j)) + " ");
+            }
+            System.out.println();
+        }
+    }
+
+    private static void printScoresMatrix(String[] words, Integer[] docIds, double[][] scores) {
+        System.out.print("         ");
+        for (Integer docId : docIds)
+            System.out.print(docId + "   ");
         System.out.println();
         for (int i = 0; i < words.length; i++) {
             System.out.print(words[i] + " ");
@@ -103,5 +133,4 @@ public class LSI {
         }
         System.out.println();
     }
-
 }
