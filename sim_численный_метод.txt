@@ -1,0 +1,3 @@
+Docs sim in DESC mode for query "численный метод":
+
+Sim("численный метод", doc8) = 0.912

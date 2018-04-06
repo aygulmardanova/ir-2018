@@ -10,11 +10,15 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class LSI {
+
+    private final int MAX_WORD_SIZE = 20;
 
     void calcLSI(String query) throws IOException, SAXException, ParserConfigurationException {
         String type = "mystem";
@@ -122,14 +126,16 @@ public class LSI {
         docScores.keySet().stream()
                 .filter(docIdsForQuery::contains);
         docScores = docScores.entrySet().stream()
-                .sorted(Map.Entry.comparingByValue()).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
+                .sorted(Map.Entry.<Integer, Double>comparingByValue().reversed()).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
                         (oldValue, newValue) -> oldValue, LinkedHashMap::new));
 
-        System.out.println("RESULT OUTPUT");
-        printScoresMatrix(words, docIds, scores);
-        System.out.println("Docs sim in ASC mode");
+        System.out.println("\nRESULT OUTPUT");
+//        printScoresMatrix(words, docIds, scores);
+//        writeScoresMatrixToFile(words, docIds, scores);
+        System.out.println("Docs sim in DESC mode");
         Map<Integer, Double> finalDocScores = docScores;
         docScores.keySet().forEach(docScore -> System.out.println("Sim(\"" + query + "\", doc" + docScore + ") = " + String.format("%.3f", finalDocScores.get(docScore))));
+        writeDocsSimsToFile(query, words, docIds, docScores);
     }
 
     private void printMatrix(Matrix matrix, String name) {
@@ -144,19 +150,61 @@ public class LSI {
     }
 
     private void printScoresMatrix(String[] words, Integer[] docIds, double[][] scores) {
-        System.out.println("Scores matrix");
-        System.out.print("         ");
+        System.out.println("Scores matrix (Matrix A)");
+        System.out.print("                      ");
         for (Integer docId : docIds)
-            System.out.print(docId + "   ");
+            System.out.print(docId + "     ");
         System.out.println();
         for (int i = 0; i < words.length; i++) {
-            System.out.print(words[i] + " ");
+            StringBuilder wordBuilder = new StringBuilder(words[i]);
+            if (wordBuilder.length() < MAX_WORD_SIZE) {
+                for (int l = wordBuilder.length(); l < MAX_WORD_SIZE; l++)
+                    wordBuilder.append(" ");
+            }
+            System.out.print(wordBuilder.toString() + " ");
             for (int j = 0; j < docIds.length; j++) {
-                System.out.print(scores[i][j] + " ");
+                System.out.print(String.format("%.3f", scores[i][j]) + " ");
             }
             System.out.println();
         }
         System.out.println();
+    }
+
+    private void writeScoresMatrixToFile(String[] words, Integer[] docIds, double[][] scores) throws IOException {
+
+        FileWriter fileWriter = new FileWriter(System.getProperty("user.dir") + "/" + "a_matrix.txt");
+        PrintWriter printWriter = new PrintWriter(fileWriter);
+
+        printWriter.println("Scores matrix (Matrix A)");
+        printWriter.print("                      ");
+        for (Integer docId : docIds)
+            printWriter.print(docId + "     ");
+        printWriter.println();
+        for (int i = 0; i < words.length; i++) {
+            StringBuilder wordBuilder = new StringBuilder(words[i]);
+            if (wordBuilder.length() < MAX_WORD_SIZE) {
+                for (int l = wordBuilder.length(); l < MAX_WORD_SIZE; l++)
+                    wordBuilder.append(" ");
+            }
+            printWriter.print(wordBuilder.toString() + " ");
+            for (int j = 0; j < docIds.length; j++) {
+                printWriter.print(String.format("%.3f", scores[i][j]) + " ");
+            }
+            printWriter.println();
+        }
+
+        printWriter.close();
+    }
+
+    private void writeDocsSimsToFile(String query, String[] words, Integer[] docIds, Map<Integer, Double> docScores) throws IOException {
+        String fileName = "sim_" + query.replaceAll(" ", "_") + ".txt";
+        FileWriter fileWriter = new FileWriter(System.getProperty("user.dir") + "/" + fileName);
+        PrintWriter printWriter = new PrintWriter(fileWriter);
+
+        printWriter.println("Docs sim in DESC mode for query \"" + query + "\":\n");
+        docScores.keySet().forEach(docScore -> printWriter.println("Sim(\"" + query + "\", doc" + docScore + ") = " + String.format("%.3f", docScores.get(docScore))));
+
+        printWriter.close();
     }
 
     private double[] getQArray(List<String> words, Map<String, Double> map) {
