@@ -13,7 +13,6 @@ import java.util.*;
 public class IntersectSearch {
 
     protected static final String INDEX_FILE_NAME = InvertedIndex.PREFIX + InvertedIndex.XML_FILE_NAME;
-    protected static final String TEXT_CONTENT_REMOVE_EMPTIES_REGEXP = "[\n\t\\s]+";
 
     public Set<Integer> search(String query, String type) throws IOException, ParserConfigurationException, SAXException {
 
@@ -43,7 +42,6 @@ public class IntersectSearch {
         }
 
         for (String word : words) {
-
             Set<Integer> docIds = new TreeSet<>();
             String searchWord;
             switch (type) {
@@ -67,7 +65,7 @@ public class IntersectSearch {
                                 wordsNodeList.item(i).getParentNode().getParentNode().getLocalName().equals("abstract")) &&
                         searchWord.equals(wordsNodeList.item(i).getAttributes().getNamedItem("word").getNodeValue())) {
 
-                    strIds = wordsNodeList.item(i).getTextContent().trim().replaceAll(TEXT_CONTENT_REMOVE_EMPTIES_REGEXP, " ").split("\\s");
+                    strIds = wordsNodeList.item(i).getTextContent().trim().replaceAll(Utils.TEXT_CONTENT_REMOVE_EMPTIES_REGEXP, " ").split("\\s");
                     Arrays.stream(strIds).forEach(strId -> docIds.add(Integer.valueOf(strId)));
 
                 }

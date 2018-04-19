@@ -16,6 +16,7 @@ public class Main {
     public static final String query7 = "численный метод";
     public static final String query8 = "задача и исследовать";
     public static final String query9 = "задача и";
+
     public static void main(String[] args) throws IOException, InterruptedException, ParserConfigurationException, SAXException {
 
 //        new Parse().parse();

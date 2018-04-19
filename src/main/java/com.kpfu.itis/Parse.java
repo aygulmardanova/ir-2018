@@ -27,8 +27,6 @@ public class Parse {
     private static final String GET_ALL_LINKS = "//td[@width='90%']/a[@class='SLink']";
     private static final String GET_ABSTRACT = "//b[contains(text(),'Аннотация')]/following::text()[preceding::b[1][contains(text(),'Аннотация')] and not(parent::b)]";
     private static final String GET_KEYWORDS = "//b[contains(text(), 'Ключевые')]/following-sibling::i[1]//text()";
-    protected static final String UNKNOWN_SYMBOLS_REGEX = "[^А-Яа-я\\s]";
-    protected static final String SPLIT_WORDS_REGEX = "[\\s]+";
     private static PorterParser porterParser;
     private static MystemParser mystemParser;
 
@@ -70,11 +68,11 @@ public class Parse {
                 articleElem.appendChild(title);
 
                 Element titlePorterElem = doc.createElement("title-porter");
-                titlePorterElem.appendChild(doc.createTextNode(getPorterString(link.getTextContent())));
+                titlePorterElem.appendChild(doc.createTextNode(getTypeString(link.getTextContent(), "porter")));
                 articleElem.appendChild(titlePorterElem);
 
                 Element titleMystemElem = doc.createElement("title-mystem");
-                titleMystemElem.appendChild(doc.createTextNode(getMystemString(link.getTextContent())));
+                titleMystemElem.appendChild(doc.createTextNode(getTypeString(link.getTextContent(), "mystem")));
                 articleElem.appendChild(titleMystemElem);
 
                 StringBuilder abstractWords = new StringBuilder();
@@ -88,11 +86,11 @@ public class Parse {
                 articleElem.appendChild(abstractElem);
 
                 Element abstractPorterElem = doc.createElement("abstract-porter");
-                abstractPorterElem.appendChild(doc.createTextNode(getPorterString(abstractWords.toString())));
+                abstractPorterElem.appendChild(doc.createTextNode(getTypeString(abstractWords.toString(), "porter")));
                 articleElem.appendChild(abstractPorterElem);
 
                 Element abstractMystemElem = doc.createElement("abstract-mystem");
-                abstractMystemElem.appendChild(doc.createTextNode(getMystemString(abstractWords.toString())));
+                abstractMystemElem.appendChild(doc.createTextNode(getTypeString(abstractWords.toString(), "mystem")));
                 articleElem.appendChild(abstractMystemElem);
 
                 StringBuilder keyWords = new StringBuilder();
@@ -112,10 +110,8 @@ public class Parse {
                     keyWord.appendChild(doc.createTextNode(keyword));
                     keywordsElem.appendChild(keyWord);
                 }
-                // to write all key words in one tag
-//                keywordsElem.appendChild(doc.createTextNode(keyWords.toString()));
-                articleElem.appendChild(keywordsElem);
 
+                articleElem.appendChild(keywordsElem);
                 articlesElem.appendChild(articleElem);
                 Thread.sleep(1000);
             }
@@ -136,28 +132,31 @@ public class Parse {
     }
 
     private String getXmlFileName() {
-        SimpleDateFormat time_formatter = new SimpleDateFormat("yyyy-MM-dd-_HH:mm:ss");
+        SimpleDateFormat time_formatter = new SimpleDateFormat(Utils.DATE_FORMAT);
         String current_time_str = time_formatter.format(System.currentTimeMillis());
         return System.getProperty("user.dir") + "/" + current_time_str.replaceAll(":", "_") + ".xml";
     }
 
-    private String getPorterString(String str) {
-        String[] porterWordsArray = str.replaceAll("[–\\-]", " ").replaceAll("\\u00A0", " ").replaceAll(UNKNOWN_SYMBOLS_REGEX, "").split(SPLIT_WORDS_REGEX);
-        StringBuilder porterWords = new StringBuilder();
-        for (String word : porterWordsArray) {
-            porterWords.append(porterParser.stem(word)).append(" ");
+    private String getTypeString(String str, String type) throws IOException {
+        String[] typeWordsArray = getWordsArray(str);
+        StringBuilder typeWords = new StringBuilder();
+        for (String word : typeWordsArray) {
+            switch (type) {
+                case "porter":
+                    typeWords.append(porterParser.stem(word)).append(" ");
+                case "mystem":
+                    if (word.length() != 0)
+                        typeWords.append(mystemParser.stem(word)).append(" ");
+            }
         }
-        return porterWords.toString();
+        return typeWords.toString();
     }
 
-    private String getMystemString(String str) throws IOException, InterruptedException {
-        StringBuilder mystemWords = new StringBuilder();
-        String[] mystemWordsArray = str.replaceAll("[–\\-]", " ").replaceAll("\\u00A0", " ").replaceAll(UNKNOWN_SYMBOLS_REGEX, "").split(SPLIT_WORDS_REGEX);
-        for (String word : mystemWordsArray) {
-            if (word.length() != 0)
-                mystemWords.append(mystemParser.stem(word)).append(" ");
-        }
-        return mystemWords.toString();
+    private String[] getWordsArray(String str) {
+        return str
+                .replaceAll("[–\\-]", " ")
+                .replaceAll("\\u00A0", " ")
+                .replaceAll(Utils.UNKNOWN_SYMBOLS_REGEX, "")
+                .split(Utils.SPLIT_WORDS_REGEX);
     }
-
 }
